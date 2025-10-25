@@ -493,15 +493,6 @@ require('lazy').setup({
       'saghen/blink.cmp',
     },
     config = function()
-      vim.lsp.config('ruff', {
-        init_options = {
-          settings = {
-            -- Ruff language server settings go here
-          },
-        },
-      })
-
-      vim.lsp.enable 'ruff'
       -- Brief aside: **What is LSP?**
       --
       -- LSP is an initialism you've probably heard, but might not understand what it is.
