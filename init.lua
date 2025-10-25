@@ -670,52 +670,6 @@ require('lazy').setup({
       --  - capabilities (table): Override fields in capabilities. Can be used to disable certain LSP features.
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
-      local servers = {
-        -- clangd = {},
-        -- gopls = {},
-        pyright = {
-          settings = {
-            python = {
-              analysis = {
-                autoImportCompletions = true,
-                typeCheckingMode = 'basic', -- “strict” si quieres más chequeo
-                reportUnusedImport = 'none', -- Ruff se encarga de esto
-                reportUnusedVariable = 'none',
-                useLibraryCodeForTypes = true,
-              },
-            },
-          },
-        },
-        -- rust_analyzer = {},
-        -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
-        --
-        -- Some languages (like typescript) have entire language plugins that can be useful:
-        --    https://github.com/pmizio/typescript-tools.nvim
-        -- But for many setups, the LSP (`ts_ls`) will work just fine
-        ruff = {
-          on_attach = function(client, _)
-            -- Deja a Pyright manejar hover/definition, Ruff solo lint y fix
-            client.server_capabilities.hoverProvider = false
-          end,
-        },
-        ts_ls = {},
-        --
-
-        lua_ls = {
-          -- cmd = { ... },
-          -- filetypes = { ... },
-          -- capabilities = {},
-          settings = {
-            Lua = {
-              completion = {
-                callSnippet = 'Replace',
-              },
-              -- You can toggle below to ignore Lua_LS's noisy `missing-fields` warnings
-              -- diagnostics = { disable = { 'missing-fields' } },
-            },
-          },
-        },
-      }
 
       -- Ensure the servers and tools above are installed
       --
@@ -724,7 +678,53 @@ require('lazy').setup({
       --    :Mason
       --
       -- You can press `g?` for help in this menu.
-      --
+      local servers = {
+        -- clangd = {},
+        -- gopls = {},
+        -- en tu tabla `servers`
+        pyright = {
+          -- Mata los diagnósticos de Pyright (pero conserva hover/completado)
+          handlers = {
+            ['textDocument/publishDiagnostics'] = function() end,
+          },
+          on_attach = function(client, _)
+            client.server_capabilities.hoverProvider = true
+            -- por si acaso, que Pyright no formatee ni ordene imports
+            client.server_capabilities.documentFormattingProvider = false
+          end,
+          settings = {
+            pyright = { disableOrganizeImports = true },
+            python = {
+              analysis = {
+                typeCheckingMode = 'off',
+                useLibraryCodeForTypes = true,
+                -- esto ya no es necesario, el handler los bloquea de raíz
+                -- ignore = { '*' },
+              },
+            },
+          },
+        },
+
+        ruff = {
+          -- Ruff solo lint/fix. Sin hover.
+          on_attach = function(client, _)
+            client.server_capabilities.hoverProvider = false
+            -- Ruff sí puede dar code actions (fix/organize)
+            client.server_capabilities.documentFormattingProvider = false -- Ruff LSP no formatea vía LSP
+          end,
+        },
+
+        ts_ls = {},
+
+        lua_ls = {
+          settings = {
+            Lua = {
+              completion = { callSnippet = 'Replace' },
+              -- diagnostics = { disable = { 'missing-fields' } },
+            },
+          },
+        },
+      }
       -- `mason` had to be setup earlier: to configure its options see the
       -- `dependencies` table for `nvim-lspconfig` above.
       --
