@@ -679,40 +679,19 @@ require('lazy').setup({
       --
       -- You can press `g?` for help in this menu.
       local servers = {
-        -- clangd = {},
-        -- gopls = {},
-        -- en tu tabla `servers`
         pyright = {
-          -- Mata los diagnósticos de Pyright (pero conserva hover/completado)
-          handlers = {
-            ['textDocument/publishDiagnostics'] = function() end,
-          },
-          on_attach = function(client, _)
-            client.server_capabilities.hoverProvider = true
-            -- por si acaso, que Pyright no formatee ni ordene imports
-            client.server_capabilities.documentFormattingProvider = false
-          end,
           settings = {
-            pyright = { disableOrganizeImports = true },
+            pyright = {
+              disableOrganizeImports = true,
+            },
             python = {
               analysis = {
-                typeCheckingMode = 'off',
-                useLibraryCodeForTypes = true,
-                -- esto ya no es necesario, el handler los bloquea de raíz
-                -- ignore = { '*' },
+                ignore = { '*' },
               },
             },
           },
         },
-
-        ruff = {
-          -- Ruff solo lint/fix. Sin hover.
-          on_attach = function(client, _)
-            client.server_capabilities.hoverProvider = false
-            -- Ruff sí puede dar code actions (fix/organize)
-            client.server_capabilities.documentFormattingProvider = false -- Ruff LSP no formatea vía LSP
-          end,
-        },
+        ruff = {},
 
         ts_ls = {},
 
@@ -725,6 +704,20 @@ require('lazy').setup({
           },
         },
       }
+      vim.api.nvim_create_autocmd('LspAttach', {
+        group = vim.api.nvim_create_augroup('lsp_attach_disable_ruff_hover', { clear = true }),
+        callback = function(args)
+          local client = vim.lsp.get_client_by_id(args.data.client_id)
+          if client == nil then
+            return
+          end
+          if client.name == 'ruff' then
+            -- Disable hover in favor of Pyright
+            client.server_capabilities.hoverProvider = false
+          end
+        end,
+        desc = 'LSP: Disable hover capability from Ruff',
+      })
       -- `mason` had to be setup earlier: to configure its options see the
       -- `dependencies` table for `nvim-lspconfig` above.
       --
@@ -787,7 +780,7 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
-        python = { 'ruff' },
+        python = { 'ruff_fix', 'ruff_format', 'ruff_organize_imports' },
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
